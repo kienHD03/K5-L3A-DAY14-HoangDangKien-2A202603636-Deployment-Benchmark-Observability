@@ -163,8 +163,13 @@ HTTP/1.1 200 OK
 
 ### Exercise 3.1: Triển khai Agent Part 6 lên Cloud
 
-- **Thư mục triển khai:** `06-lab-complete/` (sử dụng trực tiếp image build từ `06-lab-complete/Dockerfile` và dịch vụ Redis trên Cloud).
-- **Public URL:** *(Điền URL nhận từ `railway domain` hoặc Render Dashboard — đồng bộ với `DEPLOYMENT.md`)*
+- **Nền tảng:** Railway (Docker builder từ `06-lab-complete/Dockerfile` + `06-lab-complete/railway.toml`, kết nối tới dịch vụ Railway Redis qua biến `REDIS_URL`).
+- **Public URL:** https://k5-l3a-day14-hoangdangkien-2a202603636-deploymen-production.up.railway.app
+- **Kiểm tra live endpoints:**
+  - `GET /health` → `200 OK` (`{"status":"ok","environment":"production"}`)
+  - `GET /ready` → `200 OK` (`{"status":"ready"}` — xác nhận kết nối Redis trên cloud thành công)
+  - `POST /ask` (thiếu `X-API-Key`) → `401 Unauthorized`
+  - `POST /ask` (có `X-API-Key`) → `200 OK`
 - **Ảnh chụp minh chứng:**
   - Dashboard dịch vụ: [screenshots/dashboard.png](screenshots/dashboard.png)
   - Trạng thái container/logs đang chạy: [screenshots/running.png](screenshots/running.png)
@@ -429,3 +434,11 @@ Theo quy định tại `RULES.md`, dưới đây là nhật ký sử dụng tr�
    - **Câu hỏi gửi AI:** Gợi ý triển khai các module `config.py`, `redis_client.py`, `auth.py`, `rate_limiter.py` (sliding window sorted set trên Redis), `cost_guard.py` (lưu chi phí theo ngày/tháng trên Redis), `main.py` (JSON logging formatter, `/health`, `/ready`, exception handlers không lộ stack trace, `lifespan` graceful shutdown), cùng multi-stage `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `railway.toml`, `render.yaml`.
    - **Nội dung nhận được:** Mã nguồn hoàn chỉnh cho các file trong `06-lab-complete/` đảm bảo không ping Redis lúc import để container khởi động độc lập được và chạy `uvicorn` ở PID 1 qua `exec`.
    - **Tự chỉnh sửa & kiểm tra:** Chạy đầy đủ `python check_production_ready.py` trên môi trường POSIX + Docker Engine `29.9.3`, đạt `43/43 checks passed` và **`PASS 12/12`** (image 273 MB, stateless Redis sau restart trả `429`, `SIGTERM` giữ request đang chạy trả `200` và `docker stop` exit code `0` trong `1.0s`). Đồng thời tự chạy build image Part 2 (`1.67GB` → `240MB`, giảm `85.6%`) và `test_stateless.py` Part 5 trên 3 agent instances.
+4. **Hoàn thiện CP7 (Part 7 Bước 1 — Benchmark hiệu năng & Eval chất lượng):**
+   - **Câu hỏi gửi AI:** Hỗ trợ chạy toàn bộ kịch bản load test (`c=1, 10, 50, 100` và `MOCK_SLOW_RATE=0, 0.03, 0.1`), eval `v1` / `v2`, bổ sung 2 mục thiếu vào `KNOWLEDGE_BASE` và viết workflow CI quality gate.
+   - **Nội dung nhận được:** Thêm metric `agent_question_length_chars` vào `develop/app.py`, bổ sung entry `hpa`/`kubernetes` và `jwt` vào `KNOWLEDGE_BASE` ở `develop/utils/mock_llm.py` và `production/utils/mock_llm.py`, tạo `.github/workflows/eval.yml`.
+   - **Tự chỉnh sửa & kiểm tra:** Đối chiếu từng con số trong `BENCHMARK_REPORT.md` khớp 100% với 10 file JSON đã xuất trong `reports/`, xác nhận `eval_v2_fixed.json` đạt `23/23` (`100%`, `0 regression`, exit code `0`) mà không sửa `golden_dataset.jsonl`.
+5. **Hoàn thiện CP8 (Part 7 Bước 2 — Observability Stack & Đóng gói nộp bài):**
+   - **Câu hỏi gửi AI:** Hỗ trợ dựng stack Observability (`k5-day14-observability`), gỡ lỗi `ModuleNotFoundError: No module named 'uvicorn'` trong `production/Dockerfile`, chạy Locust headless `scale_1` / `scale_3`, truy xuất trace chậm/lỗi từ Jaeger & log JSON, chạy thí nghiệm Chaos kích hoạt 4 alerts Prometheus và hoàn thiện `BENCHMARK_REPORT.md`.
+   - **Nội dung nhận được:** Bổ sung `ENV PYTHONUSERBASE=/home/agent/.local` vào `production/Dockerfile`, script đo thời gian firing của 4 alert (`AgentHighErrorRate`, `AgentHighLatencyP95`, `LLMCostBurnRateHigh`, `AgentInstanceDown`), và phân tích dữ liệu scaling/observability.
+   - **Tự chỉnh sửa & kiểm tra:** Chạy `promtool test rules` đạt `SUCCESS`, đối chiếu từng chỉ số trong Mục 4–5 của `BENCHMARK_REPORT.md` khớp 100% với `scale_1_stats.csv`, `scale_3_stats.csv`, ảnh chụp Grafana/Jaeger/Prometheus và dòng log JSON có cùng `trace_id`, đồng thời dọn sạch stack bằng `docker compose -p k5-day14-observability down -v`.

@@ -1,7 +1,7 @@
 # Deployment Information
 
 ## Public URL
-`https://<your-deployed-agent-domain>` *(Cập nhật URL sau khi chạy `railway domain` hoặc deploy trên Render)*
+https://k5-l3a-day14-hoangdangkien-2a202603636-deploymen-production.up.railway.app
 
 ## Platform
 Railway (Docker builder từ `06-lab-complete/Dockerfile` + Railway Redis service)
@@ -11,7 +11,7 @@ Railway (Docker builder từ `06-lab-complete/Dockerfile` + Railway Redis servic
 Đặt biến môi trường trước khi kiểm tra (không hardcode key vào file):
 
 ```bash
-export BASE="https://<your-deployed-agent-domain>"
+export BASE="https://k5-l3a-day14-hoangdangkien-2a202603636-deploymen-production.up.railway.app"
 export AGENT_API_KEY="<your-secret-api-key>"
 ```
 
